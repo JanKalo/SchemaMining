@@ -450,6 +450,31 @@ public class KB {
 		}
 	}
 
+	/**
+	 * Removes all triples with frequent relationships. Freauent is defined by the maximumRelationshipSupport.
+	 */
+
+	public void removeFrequentRelationships(int maximumRelationshipSupport){
+		ArrayList<Triple<ByteString, ByteString, ByteString>> toDelete = new ArrayList<>();
+
+		for(ByteString relation : relationSize) {
+			if (!relation.toString().contains("type")) {
+				if (relationSize.get(relation) > maximumRelationshipSupport) {
+					Map<ByteString, IntHashMap<ByteString>> relationMap = relation2subject2object.get(relation);
+					for (ByteString subject : relationMap.keySet()) {
+						for (ByteString object : relationMap.get(subject)) {
+							toDelete.add(new Triple<ByteString, ByteString, ByteString>(subject, relation, object));
+						}
+					}
+				}
+
+			}
+			for (Triple<ByteString, ByteString, ByteString> t : toDelete) {
+				this.delete(t.first(), t.second(), t.third());
+			}
+		}
+	}
+
 
 	/**
 	 * Removes all triples with rare relationships. Rare is defined by the minimumRelationshipSupport.
@@ -575,6 +600,8 @@ public class KB {
 		for (String line : new FileLines(f, "UTF-8", message)) {
 			if (line.endsWith("."))
 				line = Char17.cutLast(line);
+			line = line.replace("<","");
+			line = line.replace(">","");
 			String[] split = line.split("\\s+");
 			//System.out.println(split.length);
 			//for(String s : split){
@@ -600,8 +627,7 @@ public class KB {
 	}
 
 	/** Loads the files */
-	public void loadSequential(List<File> files)
-			throws IOException {
+	public void loadSequential(List<File> files) {
 		long size = size();
 		long time = System.currentTimeMillis();
 		long memory = Runtime.getRuntime().freeMemory();

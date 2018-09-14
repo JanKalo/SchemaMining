@@ -227,10 +227,14 @@ public class MatchReader extends PeekIterator<MatchResult> implements Closeable 
     
   }
   /** Test routine */
-  public static void main(String[] args) throws Exception {
-    for(MatchResult idAndEntity : new MatchReader("c:\\Fabian\\Data\\yago\\search\\pairings.txt",Pattern.compile("(\\d+)\tu:http://[^\\:\n]*/([^/]+)\n"), "Parsing url mappings")) {  
-      D.p(idAndEntity.group(1), idAndEntity.group(2))      ;
-      D.r();
+  public static void main(String[] args) {
+    try {
+      for(MatchResult idAndEntity : new MatchReader("c:\\Fabian\\Data\\yago\\search\\pairings.txt",Pattern.compile("(\\d+)\tu:http://[^\\:\n]*/([^/]+)\n"), "Parsing url mappings")) {
+        D.p(idAndEntity.group(1), idAndEntity.group(2))      ;
+        D.r();
+      }
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
     }
   }
 

@@ -130,9 +130,13 @@ public class CSVLines extends PeekIterator<List<String>> {
   }
 
   /** Test method*/
-  public static void main(String[] args) throws Exception {
-    for(List<String> cols : new CSVLines("./javatools/testdata/CSVTest.csv")) {
-      System.out.println(cols);
+  public static void main(String[] args) {
+    try {
+      for(List<String> cols : new CSVLines("./javatools/testdata/CSVTest.csv")) {
+        System.out.println(cols);
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
     }
   }
 }

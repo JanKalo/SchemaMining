@@ -1,6 +1,7 @@
 package amie.mining.assistant.schemamining;
 
 import amie.data.KB;
+import amie.mining.AMIE;
 import amie.mining.assistant.MiningAssistant;
 import amie.mining.assistant.MiningOperator;
 import amie.rules.Rule;
@@ -27,8 +28,8 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
         super.minPcaConfidence = 0.05;
         super.minStdConfidence = 0.001;
         //Class in Head Relationship that should be mined
-        this.concept = ByteString.of("<http://dbpedia.org/ontology/City>");
-        super.bodyExcludedRelations = Arrays.asList(ByteString.of("<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"));
+        this.concept = ByteString.of("http://dbpedia.org/ontology/City");
+        super.bodyExcludedRelations = Arrays.asList(ByteString.of("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));
         //this.complete = completeKB;
 
     }
@@ -44,8 +45,8 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
         super.minStdConfidence = 0.001;
         //Class in Head Relationship that should be mined
         this.concept = ByteString.of(type);
-        super.bodyExcludedRelations = Arrays.asList(ByteString.of("<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"), ByteString.of("<http://purl.org/dc/terms/subject>"));
-        this.classSize = virtuoso.getSubjectSize(this.concept.toString());
+        super.bodyExcludedRelations = Arrays.asList(ByteString.of("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), ByteString.of("http://purl.org/dc/terms/subject"));
+        this.classSize = dataSource.object2relation2subject.get(ByteString.of(type)).get(ByteString.of("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")).size();
 
 
     }
@@ -75,14 +76,12 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
         ByteString[] danglingEdge = candidate.getTriples().get(0);
         IntHashMap<ByteString> constants = kb.frequentBindingsOf(danglingEdge[2], candidate.getFunctionalVariable(), candidate.getTriples());
         cardinality = constants.get(this.concept);
-        //System.out.println(cardinality);
-        //Rule newCandidate = candidate.instantiateConstant(2, this.concept, cardinality);
-        output.add(candidate);
+
+        Rule newCandidate = candidate.instantiateConstant(2, this.concept, cardinality);
+        output.add(newCandidate);
         System.out.println("SELECT DISTINCT");
-        System.out.println(candidate);
-        for(Map.Entry<ByteString, IntHashMap<ByteString>> s : kb.selectDistinct(ByteString.of("?a"), ByteString.of("?b"),candidate.getTriples()).entrySet()){
-            System.out.println(s.getKey() + " " + s.getValue());
-        }
+        System.out.println(newCandidate);
+
         return output;
     }
 
@@ -105,21 +104,14 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
             ByteString originalFreshVariable = newEdge[joinPosition];
 
 
-            //System.out.println("JOIN VARIABLES " + joinVariable);
             newEdge[joinPosition] = joinVariable;
             rule.getTriples().add(newEdge);
-//            System.out.println("JOIN VARIABLE " + joinVariable);
-//            System.out.println("NEWEDGE " + newEdge[1]);
-//            System.out.println("Functional Variable " + rule.getFunctionalVariable());
-//            System.out.println("CurrentRule " + rule.toString());
             IntHashMap<ByteString> promisingRelations = kb.frequentBindingsOf(newEdge[1],
                     rule.getFunctionalVariable(), rule.getTriples());
-            System.out.println("HASHMAPSIZE " + promisingRelations.size());
             rule.getTriples().remove(nPatterns);
 
             int danglingPosition = (joinPosition == 0 ? 2 : 0);
 
-            //System.out.println("Number of Promising Relations " + promisingRelations.size());
             for (ByteString relation : promisingRelations) {
                 if (this.bodyExcludedRelations != null &&
                         this.bodyExcludedRelations.contains(relation))
@@ -145,12 +137,12 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
                         candidate.setSupportRatio(candidate.getSupport()
                                 / (double) getTotalCount(candidate));
                         candidate.addParent(rule);
-                        //candidate.setClassConfidence(getClassConfidence(candidate));
+
                         candidate.setFrequency(cardinality/(double) this.classSize);
 
                         //Here we add the generated candidate to the output collection
                         output.add(candidate);
-                        //System.out.println("output Dangling Atom");
+
                     }
                 }
                 //}
@@ -164,14 +156,10 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
 
     @Override
     public boolean testConfidenceThresholds(Rule candidate) {
-        if (candidate.getFrequency() > 0.01) {
-            System.out.println("Frequency tested");
             candidate.setClassConfidence(this.getClassConfidence(candidate));
-            return candidate.getClassConfidence() > 0.01;
-
-        } else {
-            return false;
-        }
+            System.out.println(candidate);
+            System.out.println(candidate.getClassConfidence());
+            return candidate.getClassConfidence() > AMIE.minConfidence;
     }
 
     @Override
@@ -183,30 +171,6 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
     public void getInstantiatedAtoms(Rule rule, double minSupportThreshold,
                                      Collection<Rule> danglingEdges, Collection<Rule> output) {
         return;
-
-//        List<ByteString> queryFreshVariables = rule.getOpenVariables();
-//        if (queryFreshVariables.size() < 2) {
-//            for (Rule candidate : danglingEdges) {
-//
-//                // Find the dangling position of the query
-//                int lastTriplePatternIndex = candidate.getLastRealTriplePatternIndex();
-//                ByteString[] lastTriplePattern = candidate.getTriples().get(lastTriplePatternIndex);
-//
-//                List<ByteString> candidateFreshVariables = candidate.getOpenVariables();
-//                int danglingPosition = 0;
-//                if (candidateFreshVariables.contains(lastTriplePattern[0])) {
-//                    danglingPosition = 0;
-//                } else if (candidateFreshVariables.contains(lastTriplePattern[2])) {
-//                    danglingPosition = 2;
-//                } else {
-//                    throw new IllegalArgumentException("The query " + rule.getRuleString() +
-//                            " does not contain fresh variables in the last triple pattern.");
-//                }
-//                getInstantiatedAtoms(candidate, candidate,
-//                        lastTriplePatternIndex, danglingPosition,
-//                        minSupportThreshold, output);
-//            }
-//        }
     }
 
     @Override
@@ -219,8 +183,6 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
         for (ByteString constant: constants){
             int cardinality = constants.get(constant);
             if(cardinality >= minSupportThreshold){
-                //System.out.println("Cardinality " + cardinality);
-                //System.out.println("minsup" +  minSupportThreshold);
                 ByteString[] lastPatternCopy = queryWithDanglingEdge.getLastTriplePattern().clone();
                 lastPatternCopy[danglingPositionInEdge] = constant;
                 Rule candidate = queryWithDanglingEdge.instantiateConstant(danglingPositionInEdge,
@@ -229,12 +191,10 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
                 if(candidate.getRedundantAtoms().isEmpty()){
                     candidate.setHeadCoverage((double)cardinality / headCardinalities.get(candidate.getHeadRelation()));
                     candidate.setSupportRatio((double)cardinality / (double)getTotalCount(candidate));
-                    //candidate.setClassConfidence(this.getClassConfidence(candidate));
 
                     candidate.setFrequency(cardinality/(double) this.classSize);
                     candidate.addParent(parentQuery);
                     output.add(candidate);
-                    //System.out.println("output Instantiated Atom");
                 }
             }
         }
@@ -258,30 +218,22 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
     /**
      * A method that computes the specificity of a rule regarding the input class.
      *
-     * @param r
-     * @return
+     * @param  r
+     * @return Returns Schema Rule Confidence classConfidence
      */
 
     public double getClassConfidence(Rule r){
         double classConfidence = 0.0;
-
         ByteString[] head = r.getHead();
-        ByteString countVariable = null;
-        countVariable = head[0];
-        //r.setClassConfidence(this.getClassConfidence(r));
-        long support = kb.countDistinct(countVariable, r.getTriples());
-        String query = r.bodyToSparql();
-        //System.out.println(query);
+
+
         long supportComplete;
+        long support;
         synchronized (myLock) {
-            supportComplete = virtuoso.getResultSize(query);
+            support = virtuoso.getResultSize(r.toSPARQL());
+            supportComplete = virtuoso.getResultSize(r.bodyToSparql());
         }
-        //System.out.println("SUPPORT " + support);
-        //System.out.println("ALL " + supportComplete);
-
-
         classConfidence = support/(double) supportComplete;
-        //System.out.println("CONFIDENCE " + classConfidence);
         return classConfidence;
     }
 }

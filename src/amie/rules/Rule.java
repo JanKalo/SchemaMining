@@ -1506,30 +1506,12 @@ public class Rule {
     private void addBasicFields(StringBuilder strBuilder, Metric... metrics2Ommit) {
     	DecimalFormat df = new DecimalFormat("#.#########");
     	if (metrics2Ommit.length == 0) {
-	        strBuilder.append("\t" + df.format(getHeadCoverage()));
-	        strBuilder.append("\t" + df.format(getStdConfidence()));
-	        strBuilder.append("\t" + df.format(getPcaConfidence()));
 	        strBuilder.append("\t" + df.format(getSupport()));
 	        strBuilder.append("\t" + getBodySize());
-	        strBuilder.append("\t" + df.format(getPcaBodySize()));
-	        strBuilder.append("\t" + getFunctionalVariable());
             strBuilder.append("\t" + df.format(getClassConfidence()));
             strBuilder.append("\t" + df.format(getFrequency()));
     	} else {
         	List<Metric> metricsList = Arrays.asList(metrics2Ommit);
-        	if (!metricsList.contains(Metric.HeadCoverage))
-        		strBuilder.append("\t" + df.format(getHeadCoverage()));
-	        if (!metricsList.contains(Metric.StandardConfidence))
-	        	strBuilder.append("\t" + df.format(getStdConfidence()));
-	        if (!metricsList.contains(Metric.PCAConfidence))
-	        	strBuilder.append("\t" + df.format(getPcaConfidence()));
-	        if (!metricsList.contains(Metric.Support))
-	        	strBuilder.append("\t" + df.format(getSupport()));
-	        if (!metricsList.contains(Metric.BodySize))	        
-	        	strBuilder.append("\t" + getBodySize());
-	        if (!metricsList.contains(Metric.PCABodySize))
-	        	strBuilder.append("\t" + df.format(getPcaBodySize()));
-	        strBuilder.append("\t" + getFunctionalVariable());    		
     	}
     }
     
@@ -2362,6 +2344,38 @@ public class Rule {
 		return false;
 	}
 
+    public String toSPARQL(){
+        String query = "SELECT * WHERE {";
+        StringBuilder stringBuilder = new StringBuilder(query);
+
+        //Add triple to WHERE clause in query
+        for (ByteString[] t : this.getBody()){
+            stringBuilder.append(t[0]);
+            stringBuilder.append(" ");
+            stringBuilder.append("<");
+            stringBuilder.append(t[1]);
+            stringBuilder.append(">");
+            stringBuilder.append(" ");
+            stringBuilder.append(t[2]);
+            stringBuilder.append(". ");
+        }
+        ByteString[] t = this.getHead();
+        stringBuilder.append(t[0]);
+        stringBuilder.append(" ");
+        stringBuilder.append("<");
+        stringBuilder.append(t[1]);
+        stringBuilder.append(">");
+        stringBuilder.append(" ");
+        stringBuilder.append("<");
+        stringBuilder.append(t[2]);
+        stringBuilder.append(">");
+        stringBuilder.append(". ");
+
+        stringBuilder.append("}");
+
+        return stringBuilder.toString();
+    }
+
 
 	public String bodyToSparql(){
         String query = "SELECT * WHERE {";
@@ -2371,7 +2385,9 @@ public class Rule {
         for (ByteString[] t : this.getBody()){
             stringBuilder.append(t[0]);
             stringBuilder.append(" ");
+            stringBuilder.append("<");
             stringBuilder.append(t[1]);
+            stringBuilder.append(">");
             stringBuilder.append(" ");
             stringBuilder.append(t[2]);
             stringBuilder.append(". ");

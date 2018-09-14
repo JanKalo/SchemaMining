@@ -97,7 +97,7 @@ public class Virtuoso {
 
         int size = -1;
         sparqlQuery = sparqlQuery.replace("*", "COUNT(DISTINCT " +
-                "w?a)");
+                "?a)");
 
         try(PreparedStatement stmt = connection.prepareStatement("SPARQL " + sparqlQuery)) {
             ResultSet rs = stmt.executeQuery();
@@ -125,7 +125,7 @@ public class Virtuoso {
             e.printStackTrace();
         }
         int size = -1;
-        String sparqlQuery = "SELECT COUNT DISTINCT(?s) WHERE {?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " + URI + "}";
+        String sparqlQuery = "SELECT COUNT DISTINCT(?s) WHERE {?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <" + URI + ">}";
 
         try(PreparedStatement stmt = connection.prepareStatement("SPARQL " + sparqlQuery)) {
 

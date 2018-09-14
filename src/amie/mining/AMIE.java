@@ -65,8 +65,21 @@ public class AMIE {
      * rdfs:type that should be mined
      */
 
-    private static String type = "<http://dbpedia.org/ontology/Bank>";
+    private static String type = "http://dbpedia.org/ontology/Person";
 
+
+    /**
+     * Relative support compared to number of entities in the provided type class
+     */
+
+    private static double supportPercentage = 0.1;
+
+    /**
+     * Minimum schema rule confidence for output
+     */
+
+
+    public static double minConfidence = 0.5;
     /**
      * Cluster Mode
      */
@@ -270,10 +283,6 @@ public class AMIE {
 
         }
 
-
-
-
-
         for (Thread job : currentJobs) {
             job.start();
         }
@@ -413,8 +422,7 @@ public class AMIE {
                         // Application of the mining operators
                         Map<String, Collection<Rule>> temporalOutputMap = null;
                         try {
-                            //System.out.println("Apply Mining Operator on " + currentRule.toString());
-                            //System.out.println("OutputRule Variable is " + outputRule);
+                            System.out.println("Apply Mining Operator on " + currentRule.toString());
 //                            long start = System.currentTimeMillis();
 							temporalOutputMap = assistant.applyMiningOperators(currentRule, threshold);
   //                          long end = System.currentTimeMillis();
@@ -561,7 +569,7 @@ public class AMIE {
      * @throws InstantiationException 
      */
     public static ArrayList<AMIE> getInstance(String[] args)
-    		throws IOException,
+    		throws
             IllegalArgumentException {
         ArrayList<AMIE> minerList = new ArrayList<>();
         List<File> dataFiles = new ArrayList<File>();
@@ -602,7 +610,7 @@ public class AMIE {
         Collection<ByteString> headExcludedRelations = null;
         Collection<ByteString> headTargetRelations = null;
         headTargetRelations = new ArrayList<>();
-        headTargetRelations.add(ByteString.of("<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>"));
+        headTargetRelations.add(ByteString.of("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));
         Collection<ByteString> bodyTargetRelations = null;
         KB targetSource = null;
         KB schemaSource = null;
@@ -614,8 +622,18 @@ public class AMIE {
         // create the Options
         Options options = new Options();
 
+        Option minimalConfidence = OptionBuilder.withArgName("minconf")
+                .hasArg()
+                .withDescription("Minimum Confidence for Rules that are output.  Default: 0.5")
+                .create("minconf");
 
-        Option schemaType = OptionBuilder.withArgName("type")
+
+        Option supportPer = OptionBuilder.withArgName("support")
+                .hasArg()
+                .withDescription("Minimum Support relative to Number of Entities in provided Class.  Default: 0.1")
+                .create("support");
+
+       Option schemaType = OptionBuilder.withArgName("type")
                 .hasArg()
                 .withDescription("Provide a type/class for the schema that should be mined from the input data.  Default: Person")
                 .create("type");
@@ -786,6 +804,8 @@ public class AMIE {
         		.withDescription("Do not calculate standard confidence")
         		.create("ostd");
 
+        options.addOption(minimalConfidence);
+        options.addOption(supportPer);
         options.addOption(schemaType);
         options.addOption(completeKBOpt);
         options.addOption(stdConfThresholdOpt);
@@ -872,6 +892,26 @@ public class AMIE {
             System.out.println("Mine Schema Patterns for " + type);
         }
 
+        if (cli.hasOption("support")) {
+            try{
+                supportPercentage = Double.valueOf(cli.getOptionValue("support"));
+            }catch (NumberFormatException e){
+                System.err.println("The option -support (minimum relative support) requires a double as argument");
+                System.exit(1);
+            }
+            System.out.println("Relative Support is " + supportPercentage);
+        }
+
+        if (cli.hasOption("minconf")) {
+            try{
+                minConfidence = Double.valueOf(cli.getOptionValue("support"));
+            }catch (NumberFormatException e){
+                System.err.println("The option -minconf (minimum confidence) requires a double as argument");
+                System.exit(1);
+            }
+            System.out.println("Minimum Rule Confidence is " + minConfidence);
+        }
+
         if (cli.hasOption("minis")) {
             String minInitialSupportStr = cli.getOptionValue("minis");
             try {
@@ -884,96 +924,10 @@ public class AMIE {
             }
         }
 
-        if (cli.hasOption("minhc")) {
-            String minHeadCoverage = cli.getOptionValue("minhc");
-            try {
-                minHeadCover = Double.parseDouble(minHeadCoverage);
-            } catch (NumberFormatException e) {
-                System.err.println("The option -minhc (head coverage threshold) requires a real number as argument");
-                System.err.println("AMIE [OPTIONS] <.tsv INPUT FILES>");
-                System.err.println("AMIE+ [OPTIONS] <.tsv INPUT FILES>");
-                System.exit(1);
-            }
-        }
 
-        if (cli.hasOption("minc")) {
-            String minConfidenceStr = cli.getOptionValue("minc");
-            try {
-                minStdConf = Double.parseDouble(minConfidenceStr);
-            } catch (NumberFormatException e) {
-                System.err.println("The option -minc (confidence threshold) requires a real number as argument");
-                System.err.println("AMIE [OPTIONS] <.tsv INPUT FILES>");
-                System.err.println("AMIE+ [OPTIONS] <.tsv INPUT FILES>");
-                System.exit(1);
-            }
-        }
 
-        if (cli.hasOption("minpca")) {
-            String minicStr = cli.getOptionValue("minpca");
-            try {
-                minPCAConf = Double.parseDouble(minicStr);
-            } catch (NumberFormatException e) {
-                System.err.println("The argument for option -minpca (PCA confidence threshold) must be an integer greater than 2");
-                System.err.println("AMIE [OPTIONS] <.tsv INPUT FILES>");
-                System.err.println("AMIE+ [OPTIONS] <.tsv INPUT FILES>");
-                System.exit(1);
-            }
-        }
 
-        if (cli.hasOption("bexr")) {
-            bodyExcludedRelations = new ArrayList<>();
-            String excludedValuesStr = cli.getOptionValue("bexr");
-            String[] excludedValueArr = excludedValuesStr.split(",");
-            for (String excludedValue : excludedValueArr) {
-                bodyExcludedRelations.add(ByteString.of(excludedValue.trim()));
-            }
-        }
 
-        if (cli.hasOption("btr")) {
-            bodyTargetRelations = new ArrayList<>();
-            String targetBodyValuesStr = cli.getOptionValue("btr");
-            String[] bodyTargetRelationsArr = targetBodyValuesStr.split(",");
-            for (String targetString : bodyTargetRelationsArr) {
-                bodyTargetRelations.add(ByteString.of(targetString.trim()));
-            }
-        }
-
-        if (cli.hasOption("htr")) {
-            headTargetRelations = new ArrayList<>();
-            String targetValuesStr = cli.getOptionValue("htr");
-            String[] targetValueArr = targetValuesStr.split(",");
-            for (String targetValue : targetValueArr) {
-                headTargetRelations.add(ByteString.of(targetValue.trim()));
-            }
-        }
-
-        if (cli.hasOption("hexr")) {
-            headExcludedRelations = new ArrayList<>();
-            String excludedValuesStr = cli.getOptionValue("hexr");
-            String[] excludedValueArr = excludedValuesStr.split(",");
-            for (String excludedValue : excludedValueArr) {
-                headExcludedRelations.add(ByteString.of(excludedValue.trim()));
-            }
-        }
-
-        if (cli.hasOption("maxad")) {
-            String maxDepthStr = cli.getOptionValue("maxad");
-            try {
-                maxDepth = Integer.parseInt(maxDepthStr);
-            } catch (NumberFormatException e) {
-                System.err.println("The argument for option -maxad (maximum depth) must be an integer greater than 2");
-                System.err.println("AMIE [OPTIONS] <.tsv INPUT FILES>");
-                formatter.printHelp("AMIE+", options);
-                System.exit(1);
-            }
-
-            if (maxDepth < 2) {
-                System.err.println("The argument for option -maxad (maximum depth) must be greater or equal than 2");
-                System.err.println("AMIE [OPTIONS] <.tsv INPUT FILES>");
-                formatter.printHelp("AMIE+", options);
-                System.exit(1);
-            }
-        }
 
         if (cli.hasOption("nc")) {
             String nCoresStr = cli.getOptionValue("nc");
@@ -991,11 +945,6 @@ public class AMIE {
             }
         }
 
-
-        avoidUnboundTypeAtoms = cli.hasOption("auta");
-        exploitMaxLengthForRuntime = !cli.hasOption("deml");
-        enableQueryRewriting = !cli.hasOption("dqrw");
-        enablePerfectRulesPruning = !cli.hasOption("dpr");
         String[] leftOverArgs = cli.getArgs();
 
         if (leftOverArgs.length < 1) {
@@ -1015,104 +964,17 @@ public class AMIE {
                 dataFiles.add(new File(leftOverArgs[i]));
             }
         }
-        //Load Complete Database
-//        if(CLUSTER_MODE){
-//            File f = new File(completePath);
-//            System.out.println(completePath);
-//            completeKB = new KB();
-//            completeKB.load(f);
-//            System.out.println("Complete Database Summary:");
-//            completeKB.summarize(false);
-//        }
 
 
         //We build an array list of input files for each cluster group and add these to an arraylist of KBs
         ArrayList<KB> dataSources = new ArrayList<>();
-        //KB dataSource = new KB();
-        long timeStamp1 = System.currentTimeMillis();
         for(File f : dataFiles){
             KB dataSource = new KB(minInitialSup);
             dataSource.load(f);
             dataSource.summarize(false);
-            //dataSource.removeRareRelationships();
-            //dataSource.summarize(false);
             dataSources.add(dataSource);
-//            if(CLUSTER_MODE){
-//                completeKB.removeKB(dataSource);
-//            }
-
         }
 
-        long timeStamp2 = System.currentTimeMillis();
-//        if (cli.hasOption("optimfh")) {
-//            Announce.message("Building overlap tables for confidence approximation.");
-//            dataSource.buildOverlapTables();
-//            Announce.done("Overlap tables were built.");
-//        }
-//        sourcesLoadingTime = timeStamp2 - timeStamp1;
-
-        if (!targetFiles.isEmpty()) {
-            targetSource = new KB();
-            targetSource.load(targetFiles);
-        }
-
-        if (!schemaFiles.isEmpty()) {
-            schemaSource = new KB();
-            schemaSource.load(schemaFiles);
-        }
-
-        if (cli.hasOption("pm")) {
-            switch (cli.getOptionValue("pm")) {
-                case "support":
-                    metric = Metric.Support;
-                    System.err.println("Using " + metric + " as pruning metric with threshold " + minSup);
-                    minMetricValue = minSup;
-                    minInitialSup = minSup;
-                    break;
-                default:
-                    metric = Metric.HeadCoverage;
-                    System.err.println("Using " + metric + " as pruning metric with threshold " + minHeadCover);
-                    break;
-            }
-        } else {
-            System.out.println("Using " + metric + " as pruning metric with minimum threshold " + minHeadCover);
-            minMetricValue = minHeadCover;
-        }
-
-        if (cli.hasOption("bias")) {
-            bias = cli.getOptionValue("bias");
-        }
-
-        verbose = cli.hasOption("verbose");
-
-        if (cli.hasOption("rl")) {
-            try {
-                recursivityLimit = Integer.parseInt(cli.getOptionValue("rl"));
-            } catch (NumberFormatException e) {
-                System.err.println("The argument for option -rl (recursivity limit) must be an integer");
-                System.err.println("AMIE [OPTIONS] <.tsv INPUT FILES>");
-                System.err.println("AMIE+ [OPTIONS] <.tsv INPUT FILES>");
-                System.exit(1);
-            }
-        }
-        System.out.println("Using recursivity limit " + recursivityLimit);
-
-        enableConfidenceUpperBounds = cli.hasOption("optimcb");
-        if (enableConfidenceUpperBounds) {
-            System.out.println("Enabling standard and PCA confidences upper "
-            		+ "bounds for pruning [EXPERIMENTAL]");
-        }
-
-        enableFunctionalityHeuristic = cli.hasOption("optimfh");
-        if (enableFunctionalityHeuristic) {
-            System.out.println("Enabling functionality heuristic with ratio "
-            		+ "for pruning of low confident rules [EXPERIMENTAL]");
-        }
-
-        //only instantiate schema mining assistant
-
-
-        
         allowConstants = cli.hasOption("const");
         countAlwaysOnSubject = cli.hasOption("caos");
         realTime = !cli.hasOption("oute");
@@ -1142,21 +1004,19 @@ public class AMIE {
         }
 
         for (KB kb : dataSources) {
-            if(CLUSTER_MODE){
-                mineAssistant = new SchemaAttributeMiningAssistant(kb, completeKB);
-            }
-            else{
 
                 int rareRelationshipSup = (int) (kb.entitiesSize() * 0.01);
                 kb.setMinimumRelationshipSupport(rareRelationshipSup);
-                kb.removeRareRelationships();
+
+
                 kb.summarize(false);
                 System.out.println(kb.object2relation2subject.get(ByteString.of(type)).size());
-                int sup = (int)(kb.object2relation2subject.get(ByteString.of(type)).get(ByteString.of("<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>")).size() * 0.15);
+                int sup = (int)(kb.object2relation2subject.get(ByteString.of(type)).get(ByteString.of("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")).size() * supportPercentage);
+                kb.removeFrequentRelationships((int)(kb.object2relation2subject.get(ByteString.of(type)).get(ByteString.of("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")).size()*0.9));
                 System.out.println("minimum Support is " + sup);
                 minInitialSup = sup;
                 mineAssistant = new SchemaAttributeMiningAssistant(kb, type);
-            }
+
             mineAssistant.setKbSchema(schemaSource);
             mineAssistant.setEnabledConfidenceUpperBounds(enableConfidenceUpperBounds);
             mineAssistant.setEnabledFunctionalityHeuristic(enableFunctionalityHeuristic);
@@ -1184,41 +1044,6 @@ public class AMIE {
             miner.setRealTime(realTime);
             miner.setSeeds(headTargetRelations);
 
-            if (minStdConf > 0.0) {
-                System.out.println("Filtering on standard confidence with minimum threshold " + minStdConf);
-            } else {
-                System.out.println("No minimum threshold on standard confidence");
-            }
-
-            if (minPCAConf > 0.0) {
-                System.out.println("Filtering on PCA confidence with minimum threshold " + minPCAConf);
-            } else {
-                System.out.println("No minimum threshold on PCA confidence");
-            }
-
-            if (enforceConstants) {
-                System.out.println("Constants in the arguments of relations are enforced");
-            } else if (allowConstants) {
-                System.out.println("Constants in the arguments of relations are enabled");
-            } else {
-                System.out.println("Constants in the arguments of relations are disabled");
-            }
-
-            if (exploitMaxLengthForRuntime && enableQueryRewriting && enablePerfectRulesPruning) {
-                System.out.println("Lossless (query refinement) heuristics enabled");
-            } else {
-                if (!exploitMaxLengthForRuntime) {
-                    System.out.println("Pruning by maximum rule length disabled");
-                }
-
-                if (!enableQueryRewriting) {
-                    System.out.println("Query rewriting and caching disabled");
-                }
-
-                if (!enablePerfectRulesPruning) {
-                    System.out.println("Perfect rules pruning disabled");
-                }
-            }
             minerList.add(miner);
         }
 
@@ -1246,14 +1071,6 @@ public class AMIE {
      * @throws Exception
      */
     public static void main(String[] args) throws Exception {
-        //args = new String[1];
-        //args[0] = "/home/jan/iswc2018/data/bank/bank.nt.train";
-        //args[2] = "-const";
-
-        //completeKB.load(new File(""));
-
-
-
 
     	amie.data.U.loadSchemaConf();
     	System.out.println("Assuming " + amie.data.U.typeRelationBS + " as type relation");
@@ -1262,26 +1079,6 @@ public class AMIE {
         AMIE miner = miners.get(0);
         MiningAssistant assistant = miner.getAssistant();
         miner.mine();
-//		long loadingTime = System.currentTimeMillis() - loadingStartTime;
-//		for(AMIE miner : miners) {
-//            MiningAssistant assistant = miner.getAssistant();
-//
-//            Announce.doing("Starting the mining phase");
-//
-//            long time = System.currentTimeMillis();
-//            List<Rule> rules = miner.mine();
-//
-//            if (!miner.isRealTime()) {
-//                AMIE.printRuleHeaders(assistant);
-//                for (Rule rule : rules) {
-//                    System.out.println(assistant.formatRule(rule));
-//                }
-//            }
-//            long miningTime = System.currentTimeMillis() - time;
-//            System.out.println("Mining done in " + NumberFormatter.formatMS(miningTime));
-//            Announce.done("Total time " + NumberFormatter.formatMS(miningTime + loadingTime));
-//            System.out.println(rules.size() + " rules mined.");
-//        }
     }
 
 }
