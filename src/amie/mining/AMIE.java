@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -154,6 +155,12 @@ public class AMIE {
     public static final List<String> headers = Arrays.asList("Rule", "Head Coverage", "Std Confidence", 
     		"PCA Confidence", "Positive Examples", "Body size", "PCA Body size",
             "Functional variable", "Std. Lower Bound", "PCA Lower Bound", "PCA Conf estimation");
+
+
+    /**
+     * amount of currently waiting workers
+     */
+    public static AtomicInteger waitingWorkers = new AtomicInteger(0);
 
     /**
      *
@@ -384,16 +391,35 @@ public class AMIE {
             this.indexedOutputSet = indexedOutputSet;
         }
 
+
         @Override
         public void run() {
+            boolean workerWaiting = false;
+            boolean shouldrun = true;
+
             System.out.println("Miner " + Thread.currentThread().getName() + " started and running...");
-            while (true) {
+            while (shouldrun) {
                 Rule currentRule = null;
 				try {
 					currentRule = queryPool.dequeue();
 
-					if(currentRule == null)
-					    Thread.sleep(50);
+					if(currentRule == null) {
+                        // Is worker already waiting?
+                        if(workerWaiting == false) {
+                            // No - set state to waiting
+                            workerWaiting = true;
+                            // Increment and get waiting workers
+                            int waiting = waitingWorkers.incrementAndGet();
+                            //all threads are waiting?
+                            if(waiting == nThreads){
+                                // All workers can be shutted down
+                                shouldrun = false;
+                                System.out.println("Miner " + Thread.currentThread().getName() + " all workers are waiting - no more task - shutting down...");
+                            }
+                        }
+                        // Waiting for new possible rules
+                        Thread.sleep(50);
+					}
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -406,6 +432,13 @@ public class AMIE {
                     */
                if(currentRule != null){
                    System.out.println("QUERY POOL SIZE: " + queryPool.size());
+                   //If worker was waiting before
+                   if(workerWaiting == true) {
+                       //Not waiting anymore
+                       workerWaiting = false;
+                       //decrement waiting workers
+                       waitingWorkers.decrementAndGet();
+                   }
 
 
                    // Check if the rule meets the language bias and confidence thresholds and
