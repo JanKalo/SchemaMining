@@ -417,6 +417,14 @@ public class AMIE {
                                 System.out.println("Miner " + Thread.currentThread().getName() + " all workers are waiting - no more task - shutting down...");
                             }
                         }
+                        else {
+                            int waiting = waitingWorkers.get();
+                            if(waiting == nThreads){
+                                // All workers can be shutted down
+                                shouldrun = false;
+                                System.out.println("Miner " + Thread.currentThread().getName() + " all workers are waiting - no more task - shutting down...");
+                            }
+                        }
                         // Waiting for new possible rules
                         Thread.sleep(50);
 					}
