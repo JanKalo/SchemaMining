@@ -88,8 +88,7 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
 
         Rule newCandidate = candidate.instantiateConstant(2, this.concept, cardinality);
         output.add(newCandidate);
-        System.out.println("SELECT DISTINCT");
-        System.out.println(newCandidate);
+
 
         return output;
     }
@@ -131,7 +130,7 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
 
                 //check weather the cardinality of the joined relationship is above the minimum Threshold
                 //Problems: Isnt the Support between 0 and 1, and the cardinality always above 1?
-                System.out.println("Rule" + rule + "Relation " + relation + "Cardinality " + cardinality);
+
                 if (cardinality >= minSupportThreshold) {
 
                     if (!rule.containsRelation(relation)) {
@@ -169,8 +168,6 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
     @Override
     public boolean testConfidenceThresholds(Rule candidate) {
             candidate.setClassConfidence(this.getClassConfidence(candidate));
-            System.out.println(candidate);
-            System.out.println(candidate.getClassConfidence());
             return candidate.getClassConfidence() > AMIE.minConfidence;
     }
 

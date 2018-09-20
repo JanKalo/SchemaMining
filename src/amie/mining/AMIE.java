@@ -457,19 +457,10 @@ public class AMIE {
                     // Here the confidence bounds with our Complete Dataset should be checked!
                    outputRule = assistant.testConfidenceThresholds(currentRule);
                    double threshold = getCountThreshold(currentRule);
-                    // Check if we should further refine the rule
-                   boolean furtherRefined = true;
-                   for (Rule r : outputSet){
-                       if(currentRule.subsumes(r) && currentRule.getClassConfidence() < r.getClassConfidence() && currentRule.getFrequency() < r.getFrequency()){
-                           furtherRefined = false;
-                           break;
-                       }
-                   }
-                   if(furtherRefined){
                         // Application of the mining operators
                         Map<String, Collection<Rule>> temporalOutputMap = null;
                         try {
-                            System.out.println("Apply Mining Operator on " + currentRule.toString());
+
 //                            long start = System.currentTimeMillis();
 							temporalOutputMap = assistant.applyMiningOperators(currentRule, threshold);
   //                          long end = System.currentTimeMillis();
@@ -488,12 +479,25 @@ public class AMIE {
                         for (Map.Entry<String, Collection<Rule>> entry : temporalOutputMap.entrySet()) {
                         	String operator = entry.getKey();
                         	Collection<Rule> items = entry.getValue();
-                        	//if (!operator.equals("dangling")) {
-                            //Add all mined Rules to the queryPool
-                            queryPool.queueAll(items);
-                        	//}
-                        }
-                        }
+//                                for (Rule r : items){
+//                                    if(currentRule.subsumes(r) && currentRule.getClassConfidence() < r.getClassConfidence() && currentRule.getFrequency() < r.getFrequency()){
+//                                    }
+//                                    else{
+//                                        queryPool.queue(r);
+//                                    }
+//                                }
+                            for (Rule r : items) {
+                                if(currentRule.subsumes(r) && currentRule.getClassConfidence() < r.getClassConfidence()- 0.05 && currentRule.getFrequency() < r.getFrequency()){
+
+                                }
+                                else{
+                                    // Only add rule, if it improves the old rule by more than a threshold
+                                    queryPool.queue(r);
+                                }
+                            }
+
+                            }
+
 
                     // Output the rule
                     if (outputRule) {
@@ -657,8 +661,7 @@ public class AMIE {
         Collection<ByteString> bodyExcludedRelations = null;
         Collection<ByteString> headExcludedRelations = null;
         Collection<ByteString> headTargetRelations = null;
-        headTargetRelations = new ArrayList<>();
-        headTargetRelations.add(ByteString.of(typeRelationship));
+
         Collection<ByteString> bodyTargetRelations = null;
         KB targetSource = null;
         KB schemaSource = null;
@@ -965,7 +968,7 @@ public class AMIE {
 
         if (cli.hasOption("minconf")) {
             try{
-                minConfidence = Double.valueOf(cli.getOptionValue("support"));
+                minConfidence = Double.valueOf(cli.getOptionValue("minconf"));
             }catch (NumberFormatException e){
                 System.err.println("The option -minconf (minimum confidence) requires a double as argument");
                 System.exit(1);
@@ -1064,6 +1067,8 @@ public class AMIE {
             minPCAConf = DEFAULT_PCA_CONFIDENCE;
         }
 
+        headTargetRelations = new ArrayList<>();
+        headTargetRelations.add(ByteString.of(typeRelationship));
         for (KB kb : dataSources) {
 
                 int rareRelationshipSup = (int) (kb.entitiesSize() * 0.01);
