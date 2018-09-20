@@ -75,11 +75,12 @@ public class AMIE {
 
     private static double supportPercentage = 0.1;
 
+
+    private static String typeRelationship = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+
     /**
      * Minimum schema rule confidence for output
      */
-
-
     public static double minConfidence = 0.5;
     /**
      * Cluster Mode
@@ -455,11 +456,16 @@ public class AMIE {
 
                     // Here the confidence bounds with our Complete Dataset should be checked!
                    outputRule = assistant.testConfidenceThresholds(currentRule);
-
+                   double threshold = getCountThreshold(currentRule);
                     // Check if we should further refine the rule
-
-                        double threshold = getCountThreshold(currentRule);
-                        
+                   boolean furtherRefined = true;
+                   for (Rule r : outputSet){
+                       if(currentRule.subsumes(r) && currentRule.getClassConfidence() < r.getClassConfidence() && currentRule.getFrequency() < r.getFrequency()){
+                           furtherRefined = false;
+                           break;
+                       }
+                   }
+                   if(furtherRefined){
                         // Application of the mining operators
                         Map<String, Collection<Rule>> temporalOutputMap = null;
                         try {
@@ -486,6 +492,7 @@ public class AMIE {
                             //Add all mined Rules to the queryPool
                             queryPool.queueAll(items);
                         	//}
+                        }
                         }
 
                     // Output the rule
@@ -651,7 +658,7 @@ public class AMIE {
         Collection<ByteString> headExcludedRelations = null;
         Collection<ByteString> headTargetRelations = null;
         headTargetRelations = new ArrayList<>();
-        headTargetRelations.add(ByteString.of("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));
+        headTargetRelations.add(ByteString.of(typeRelationship));
         Collection<ByteString> bodyTargetRelations = null;
         KB targetSource = null;
         KB schemaSource = null;
@@ -679,6 +686,11 @@ public class AMIE {
                 .withDescription("Provide a type/class for the schema that should be mined from the input data.  Default: Person")
                 .create("type");
 
+
+        Option tRel = OptionBuilder.withArgName("trel")
+                .hasArg()
+                .withDescription("Provide the relationship that expresses a class membership in the provided KB.  Default: rdf:type")
+                .create("trel");
 
 
         Option completeKBOpt = OptionBuilder.withArgName("complete")
@@ -879,6 +891,8 @@ public class AMIE {
         options.addOption(extraFileOp);
         options.addOption(datalogNotationOpt);
         options.addOption(calculateStdConfidenceOp);
+        options.addOption(tRel);
+
 
         try {
             cli = parser.parse(options, args);
@@ -932,6 +946,12 @@ public class AMIE {
             type = cli.getOptionValue("type");
             System.out.println("Mine Schema Patterns for " + type);
         }
+
+        if (cli.hasOption("trel")) {
+            typeRelationship = cli.getOptionValue("trel");
+            System.out.println("The type relationship is: " + typeRelationship);
+        }
+
 
         if (cli.hasOption("support")) {
             try{
@@ -1052,11 +1072,11 @@ public class AMIE {
 
                 kb.summarize(false);
                 System.out.println(kb.object2relation2subject.get(ByteString.of(type)).size());
-                int sup = (int)(kb.object2relation2subject.get(ByteString.of(type)).get(ByteString.of("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")).size() * supportPercentage);
-                kb.removeFrequentRelationships((int)(kb.object2relation2subject.get(ByteString.of(type)).get(ByteString.of("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")).size()*0.9));
+                int sup = (int)(kb.object2relation2subject.get(ByteString.of(type)).get(ByteString.of(typeRelationship)).size() * supportPercentage);
+                //kb.removeFrequentRelationships((int)(kb.object2relation2subject.get(ByteString.of(type)).get(ByteString.of("http://www.wikidata.org/prop/direct/P279")).size()*0.9));
                 System.out.println("minimum Support is " + sup);
                 minInitialSup = sup;
-                mineAssistant = new SchemaAttributeMiningAssistant(kb, type);
+                mineAssistant = new SchemaAttributeMiningAssistant(kb, type,typeRelationship);
 
             mineAssistant.setKbSchema(schemaSource);
             mineAssistant.setEnabledConfidenceUpperBounds(enableConfidenceUpperBounds);
@@ -1078,6 +1098,7 @@ public class AMIE {
             mineAssistant.setVerbose(verbose);
             mineAssistant.setOmmitStdConfidence(ommitStdConfidence);
             mineAssistant.setDatalogNotation(datalogOutput);
+            //mineAssistant.setTypeRelationship(typeRelationship);
 
             System.out.println(mineAssistant.getDescription());
 

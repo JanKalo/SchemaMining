@@ -37,6 +37,12 @@ import javatools.datatypes.Pair;
  */
 public class MiningAssistant{
 
+	/*
+	Type Relationship
+	 */
+
+	protected String typeRelationship;
+
 	/**
 	 * Maximum number of times a relation can appear in
 	 * a rule.
@@ -1522,4 +1528,6 @@ public class MiningAssistant{
 	public void setDatalogNotation(boolean datalogNotation) {
 		this.datalogNotation = datalogNotation;
 	}
+
+	public void setTypeRelationship(String typeRelationship) { this.typeRelationship = typeRelationship; }
 }

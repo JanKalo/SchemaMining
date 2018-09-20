@@ -19,6 +19,11 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
     static Object myLock = new Object();
     int classSize;
 
+
+
+
+
+
     public SchemaAttributeMiningAssistant(KB dataSource, KB completeKB) {
         super(dataSource);
         virtuoso = new Virtuoso();
@@ -29,32 +34,36 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
         super.minStdConfidence = 0.001;
         //Class in Head Relationship that should be mined
         this.concept = ByteString.of("http://dbpedia.org/ontology/City");
-        super.bodyExcludedRelations = Arrays.asList(ByteString.of("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));
+        super.bodyExcludedRelations = Arrays.asList(ByteString.of(super.typeRelationship));
         //this.complete = completeKB;
 
     }
 
 
-    public SchemaAttributeMiningAssistant(KB dataSource, String type) {
+    public SchemaAttributeMiningAssistant(KB dataSource, String type, String typeRelation) {
         super(dataSource);
         //virtuoso = new Virtuoso();
         //bodyExcludedRelations = Arrays.asList(ByteString.of("<rdf:type>"));
+        super.typeRelationship = typeRelation;
         super.maxDepth = 8;
         super.setEnablePerfectRules(true);
         super.minPcaConfidence = 0.05;
         super.minStdConfidence = 0.001;
         //Class in Head Relationship that should be mined
         this.concept = ByteString.of(type);
-        super.bodyExcludedRelations = Arrays.asList(ByteString.of("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), ByteString.of("http://purl.org/dc/terms/subject"));
-        this.classSize = dataSource.object2relation2subject.get(ByteString.of(type)).get(ByteString.of("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")).size();
+        super.bodyExcludedRelations = Arrays.asList(ByteString.of(super.typeRelationship), ByteString.of("http://purl.org/dc/terms/subject"));
+        this.classSize = dataSource.object2relation2subject.get(ByteString.of(type)).get(ByteString.of(super.typeRelationship)).size();
 
 
     }
+
+
 
     @Override
     public String getDescription() {
         return "Rules of the form r(x,y) r(x,z) => type(x, C) or r(x,c1) r(x,c2) => type(x, C)";
     }
+
 
 
     @Override
@@ -122,7 +131,9 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
 
                 //check weather the cardinality of the joined relationship is above the minimum Threshold
                 //Problems: Isnt the Support between 0 and 1, and the cardinality always above 1?
+                System.out.println("Rule" + rule + "Relation " + relation + "Cardinality " + cardinality);
                 if (cardinality >= minSupportThreshold) {
+
                     if (!rule.containsRelation(relation)) {
                         newEdge[1] = relation;
                         Rule candidate = rule.addAtom(newEdge, cardinality);
@@ -145,6 +156,7 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
 
                     }
                 }
+
                 //}
 
                 newEdge[1] = originalRelationVariable;
