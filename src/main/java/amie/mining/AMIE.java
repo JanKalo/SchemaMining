@@ -42,7 +42,7 @@ import javatools.administrative.Announce;
 import javatools.datatypes.ByteString;
 import javatools.datatypes.MultiMap;
 import javatools.parsers.NumberFormatter;
-import sun.awt.X11.XConstants;
+//import sun.awt.X11.XConstants;                // unused
 
 /**
  * Main class that implements the AMIE algorithm for rule mining 
@@ -377,8 +377,8 @@ public class AMIE {
          * @param outputSet
          * @param resultsLock Lock associated to the output buffer were mined rules are added
          * @param resultsCondition Condition variable associated to the results lock
-         * @param sharedCounter Reference to a shared counter that keeps track of the number of threads that are running
-         * in the system.
+         //* @param sharedCounter Reference to a shared counter that keeps track of the number of threads
+         //* that are running in the system.
          * @param indexedOutputSet
          */
         public RDFMinerJob(AMIEQueue seedsPool,
