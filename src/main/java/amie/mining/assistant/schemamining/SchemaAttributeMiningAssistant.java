@@ -1,5 +1,6 @@
 package amie.mining.assistant.schemamining;
 
+
 import amie.data.KB;
 import amie.mining.AMIE;
 import amie.mining.assistant.MiningAssistant;
@@ -52,7 +53,7 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
         //Class in Head Relationship that should be mined
         this.concept = ByteString.of(type);
         super.bodyExcludedRelations = Arrays.asList(ByteString.of(super.typeRelationship), ByteString.of("http://purl.org/dc/terms/subject"));
-        this.classSize = dataSource.object2relation2subject.get(ByteString.of(type)).get(ByteString.of(super.typeRelationship)).size();
+        this.classSize = dataSource.subject2relation2object.size();
 
 
     }
@@ -88,8 +89,7 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
 
         Rule newCandidate = candidate.instantiateConstant(2, this.concept, cardinality);
         output.add(newCandidate);
-
-
+        newCandidate.setClassConfidence(0.0);
         return output;
     }
 
@@ -149,7 +149,7 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
                         candidate.addParent(rule);
 
                         candidate.setFrequency(cardinality/(double) this.classSize);
-
+                        candidate.setClassConfidence(this.getClassConfidence(candidate));
                         //Here we add the generated candidate to the output collection
                         output.add(candidate);
 
@@ -167,8 +167,8 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
 
     @Override
     public boolean testConfidenceThresholds(Rule candidate) {
-            candidate.setClassConfidence(this.getClassConfidence(candidate));
-            return candidate.getClassConfidence() > AMIE.minConfidence;
+
+        return candidate.getClassConfidence() > AMIE.minConfidence;
     }
 
     @Override
@@ -202,6 +202,7 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
                     candidate.setSupportRatio((double)cardinality / (double)getTotalCount(candidate));
 
                     candidate.setFrequency(cardinality/(double) this.classSize);
+                    candidate.setClassConfidence(this.getClassConfidence(candidate));
                     candidate.addParent(parentQuery);
                     output.add(candidate);
                 }
@@ -234,14 +235,19 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
     public double getClassConfidence(Rule r){
         double classConfidence = 0.0;
         ByteString[] head = r.getHead();
+        ByteString countVariable = null;
+        countVariable = head[0];
 
 
         long supportComplete;
-        long support;
-        synchronized (myLock) {
-            support = virtuoso.getResultSize(r.toSPARQL());
-            supportComplete = virtuoso.getResultSize(r.bodyToSparql());
-        }
+        double support;
+        support = kb.countDistinct(countVariable, r.getTriples());
+        supportComplete = AMIE.completeKB.countDistinct(countVariable, r.getTriples());
+
+//        synchronized (myLock) {
+//            support = virtuoso.getResultSize(r.toSPARQL());
+//            supportComplete = virtuoso.getResultSize(r.bodyToSparql());
+//        }
         classConfidence = support/(double) supportComplete;
         return classConfidence;
     }
