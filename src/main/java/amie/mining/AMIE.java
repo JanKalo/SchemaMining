@@ -499,9 +499,9 @@ public class AMIE {
                         Collection<Rule> items = entry.getValue();
                         for (Rule r : items) {
                             if(currentRule.subsumes(r)){
-                                System.out.println("Subsumes");
-                                System.out.println("OLD RULE" + currentRule + " " +currentRule.getClassConfidence());
-                                System.out.println("NEW RULE" + r + " " + r.getClassConfidence());
+//                                System.out.println("Subsumes");
+//                                System.out.println("OLD RULE" + currentRule + " " + currentRule.getSupport() + " " +currentRule.getClassConfidence());
+//                                System.out.println("NEW RULE" + r + " " + r.getClassConfidence());
                                 if(currentRule.getClassConfidence() > r.getClassConfidence() - 0.05 ) {
                                     System.out.println("Class Confidence is too small");
                                     continue;
@@ -521,6 +521,7 @@ public class AMIE {
 //                        }
                     // Output the rule
                     if (outputRule) {
+                        System.out.println(currentRule + " added to ouput.");
                         this.resultsLock.lock();
                         Set<Rule> outputQueries = indexedOutputSet.get(currentRule.alternativeParentHashCode());
                         if (outputQueries != null) {
@@ -1179,7 +1180,7 @@ public class AMIE {
      * @throws Exception
      */
     public static void main(String[] args) throws Exception {
-
+        System.out.println("Version 8");
         amie.data.U.loadSchemaConf();
         System.out.println("Assuming " + amie.data.U.typeRelationBS + " as type relation");
         long loadingStartTime = System.currentTimeMillis();

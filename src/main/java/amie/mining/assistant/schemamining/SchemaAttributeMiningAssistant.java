@@ -239,16 +239,21 @@ public class SchemaAttributeMiningAssistant extends MiningAssistant {
         countVariable = head[0];
 
 
-        long supportComplete;
+        double supportComplete;
         double support;
         support = kb.countDistinct(countVariable, r.getTriples());
-        supportComplete = AMIE.completeKB.countDistinct(countVariable, r.getTriples());
-
+        supportComplete = AMIE.completeKB.countDistinct(countVariable, r.getBody());
+        if(support == 0){
+            System.out.println("Support for " + r + " is 0.");
+        }
+        if(supportComplete == 0){
+            System.out.println("Complete Support for " + r + " is 0.");
+        }
 //        synchronized (myLock) {
 //            support = virtuoso.getResultSize(r.toSPARQL());
 //            supportComplete = virtuoso.getResultSize(r.bodyToSparql());
 //        }
-        classConfidence = support/(double) supportComplete;
+        classConfidence = support/supportComplete;
         return classConfidence;
     }
 }
