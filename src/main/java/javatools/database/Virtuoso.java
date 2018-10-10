@@ -42,7 +42,7 @@ public class Virtuoso {
 
     }
 
-    private ArrayList<String> getResults(String sparqlQuery){
+    public ArrayList<String> getResults(String sparqlQuery){
 
         try {
             if(connection == null || this.connection.isClosed()){
